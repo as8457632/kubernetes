@@ -766,11 +766,14 @@ func (vs *VSphere) InstanceExistsByProviderID(ctx context.Context, providerID st
 		return false, err
 	}
 	_, err = vs.InstanceID(ctx, convertToK8sType(nodeName))
-	if err == nil {
-		return true, nil
+	if err != nil {
+		if err == cloudprovider.InstanceNotFound {
+			return false, nil
+		}
+		return false, err
 	}
 
-	return false, err
+	return true, nil
 }
 
 // InstanceShutdownByProviderID returns true if the instance is in safe state to detach volumes
@@ -832,15 +835,17 @@ func (vs *VSphere) InstanceID(ctx context.Context, nodeName k8stypes.NodeName) (
 			klog.Errorf("Failed to get VM object for node: %q. err: +%v", convertToString(nodeName), err)
 			return "", err
 		}
-		isActive, err := vm.IsActive(ctx)
+
+		exists, err := vm.Exists(ctx)
 		if err != nil {
-			klog.Errorf("Failed to check whether node %q is active. err: %+v.", convertToString(nodeName), err)
+			klog.Errorf("Failed to check whether node %q still exists. err: %+v.", convertToString(nodeName), err)
 			return "", err
 		}
-		if isActive {
+		if exists {
 			return vs.vmUUID, nil
 		}
-		klog.Warningf("The VM: %s is not in %s state", convertToString(nodeName), vclib.ActivePowerState)
+
+		klog.Warningf("The VM: %s doesn't exist", convertToString(nodeName))
 		return "", cloudprovider.InstanceNotFound
 	}
 
@@ -1216,9 +1221,15 @@ func (vs *VSphere) DisksAreAttached(nodeVolumes map[k8stypes.NodeName][]string) 
 			}
 
 		}
+		klog.V(4).Infof("DisksAreAttached successfully executed. result: %+v", attached)
+		// There could be nodes in cluster which do not have any pods with vsphere volumes running on them
+		// such nodes won't be part of nodeVolumes map because attach-detach controller does not keep track
+		// such nodes. But such nodes may still have dangling volumes on them and hence we need to scan all the
+		// remaining nodes which weren't scanned by code previously.
+		vs.BuildMissingVolumeNodeMap(ctx)
 		// any volume which we could not verify will be removed from the map.
 		vs.vsphereVolumeMap.RemoveUnverified()
-		klog.V(4).Infof("DisksAreAttach successfully executed. result: %+v", attached)
+		klog.V(4).Infof("current node volume map is: %+v", vs.vsphereVolumeMap.volumeNodeMap)
 		return disksAttached, nil
 	}
 	requestTime := time.Now()

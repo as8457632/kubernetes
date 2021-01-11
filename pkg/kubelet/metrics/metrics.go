@@ -53,6 +53,8 @@ const (
 	VolumeStatsInodesKey         = "volume_stats_inodes"
 	VolumeStatsInodesFreeKey     = "volume_stats_inodes_free"
 	VolumeStatsInodesUsedKey     = "volume_stats_inodes_used"
+	RunningPodsKey               = "running_pods"
+	RunningContainersKey         = "running_containers"
 	// Metrics keys of remote runtime operations
 	RuntimeOperationsKey         = "runtime_operations_total"
 	RuntimeOperationsDurationKey = "runtime_operations_duration_seconds"
@@ -204,7 +206,7 @@ var (
 			Subsystem:      KubeletSubsystem,
 			Name:           RuntimeOperationsDurationKey,
 			Help:           "Duration in seconds of runtime operations. Broken down by operation type.",
-			Buckets:        metrics.DefBuckets,
+			Buckets:        metrics.ExponentialBuckets(.005, 2.5, 14),
 			StabilityLevel: metrics.ALPHA,
 		},
 		[]string{"operation_type"},
@@ -362,7 +364,7 @@ var (
 	RunningPodCount = metrics.NewGauge(
 		&metrics.GaugeOpts{
 			Subsystem:      KubeletSubsystem,
-			Name:           "running_pods",
+			Name:           RunningPodsKey,
 			Help:           "Number of pods currently running",
 			StabilityLevel: metrics.ALPHA,
 		},
@@ -371,7 +373,7 @@ var (
 	RunningContainerCount = metrics.NewGaugeVec(
 		&metrics.GaugeOpts{
 			Subsystem:      KubeletSubsystem,
-			Name:           "running_containers",
+			Name:           RunningContainersKey,
 			Help:           "Number of containers currently running",
 			StabilityLevel: metrics.ALPHA,
 		},

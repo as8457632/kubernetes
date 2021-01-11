@@ -17,7 +17,7 @@ go_binary(
 go_library(
     name = "go_default_library",
     srcs = [
-        "controller-manager.go",
+        "main.go",
         "nodeipamcontroller.go",
         "providers.go",
     ],
@@ -36,6 +36,7 @@ go_library(
         "//staging/src/k8s.io/component-base/metrics/prometheus/clientgo:go_default_library",
         "//staging/src/k8s.io/component-base/metrics/prometheus/version:go_default_library",
         "//staging/src/k8s.io/controller-manager/app:go_default_library",
+        "//staging/src/k8s.io/controller-manager/pkg/features:go_default_library",
         "//staging/src/k8s.io/legacy-cloud-providers/aws:go_default_library",
         "//staging/src/k8s.io/legacy-cloud-providers/azure:go_default_library",
         "//staging/src/k8s.io/legacy-cloud-providers/gce:go_default_library",
